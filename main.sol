@@ -1,9 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >= 0.8.0;
 
+interface IERC20 {
+    function allowance(address owner, address spender) external view returns (uint256 remaining);
+    function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);
+}
+
 contract SeikaLink {
     address owner;
     address public oracleAddress;
+    IERC20 public SKT = IERC20(0xaEA58134c007307f7ddE0444ddF65e7b6294427D);
 
     uint JobId = 0;
 
@@ -38,6 +44,13 @@ contract SeikaLink {
         _;
     }
 
+    // 請求者必須要先送足夠的代幣
+    modifier cost_Ten_SKT() {
+        require(SKT.allowance(address(this), msg.sender) > 1e19, 'Require ten SKT send to contract');
+        SKT.transferFrom(msg.sender, address(this), 1e19);
+        _;
+    }
+
     function setOwner(address newOwner) onlyOwner public {
         owner = newOwner;
     }
@@ -52,7 +65,7 @@ contract SeikaLink {
         string calldata date,        // With format "YYMMDD", YY is the last two number of year in AD.
         uint256 price,      // The strike price
         string calldata buytype      // Buy Call for "C", Buy Put for "P"
-    ) external returns (uint) {
+    ) external cost_Ten_SKT returns (uint) {
         emit EventGetOptionPrice(
             coin,
             date,
